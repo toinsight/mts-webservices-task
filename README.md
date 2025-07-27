@@ -75,7 +75,7 @@ python task1_downloader.py
 
 **Результат:**
 - Создаст папку `downloaded_pages/` с сохраненным HTML-кодом каждой страницы в отдельном .txt файле.
-- Создаст папку `analysis_results/` и поместит в нее файлы `task1_analysis_results_v2.json` и `task1_analysis_results_v2.xlsx`.
+- Создаст папку `analysis_results/` и поместит в нее файлы `task1_analysis_results.json` и `task1_analysis_results.xlsx`.
 
 ---
 
