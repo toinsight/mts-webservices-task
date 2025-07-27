@@ -43,10 +43,11 @@ URLS_TO_ANALYZE = [
 OUTPUT_DIR = "downloaded_pages"
 # Название папки, куда будут сохраняться итоговые файлы с результатами анализа.
 ANALYSIS_RESULTS_DIR = "analysis_results"
+# *** ИЗМЕНЕНИЕ: Скорректированы имена файлов ***
 # Полный путь к JSON-файлу. os.path.join используется для создания корректного пути независимо от ОС (Windows/Linux/macOS).
-JSON_RESULTS_FILE = os.path.join(ANALYSIS_RESULTS_DIR, "task1_analysis_results_v2.json")
+JSON_RESULTS_FILE = os.path.join(ANALYSIS_RESULTS_DIR, "task1_analysis_results.json")
 # Полный путь к Excel-файлу.
-EXCEL_RESULTS_FILE = os.path.join(ANALYSIS_RESULTS_DIR, "task1_analysis_results_v2.xlsx")
+EXCEL_RESULTS_FILE = os.path.join(ANALYSIS_RESULTS_DIR, "task1_analysis_results.xlsx")
 # Список ключевых технологий и инструментов, которые мы будем искать на страницах.
 TOOLS_KEYWORDS = ['API', 'Terraform', 'CLI', 'Ansible', 'Kubernetes', 'Docker', 'SDK']
 # Заголовки HTTP-запроса. `User-Agent` имитирует запрос из браузера, что повышает шансы на успешное скачивание.
@@ -91,7 +92,7 @@ def print_report(result: dict):
         # Печатаем сводку по ссылкам.
         links = result['links_summary']
         print(f"✅ Количество ссылок: {links['total_links']} (Внутренние: {links['internal_links']}, Внешние: {links['external_links']})")
-        
+
         # Если есть битые ссылки, выводим предупреждение.
         if links['broken_links'] > 0:
             print(f"⚠️ Найдено битых ссылок: {links['broken_links']}")
@@ -158,14 +159,14 @@ def analyze_documentation_page(url: str, link_status_cache: dict) -> dict:
         # --- АНАЛИЗ (сохраняем все в словарь `page_result`) ---
         page_result["status"] = "Success"  # Меняем статус на "успешно".
         page_result["title"] = soup.title.string.strip() if soup.title else "N/A"
-        
+
         # Безопасно извлекаем мета-описание, проверяя, что тег найден и у него есть нужный атрибут.
         description_tag = soup.find('meta', attrs={'name': 'description'})
         if isinstance(description_tag, Tag) and description_tag.has_attr('content'):
             page_result["description"] = description_tag['content'].strip()
         else:
             page_result["description"] = "N/A"
-        
+
         # ***РЕКОМЕНДАЦИЯ №2: Добавлен комментарий о "хрупкости" селектора.***
         # Ищем дату обновления по специфическому CSS-классу.
         # ВАЖНО: Этот селектор зависит от текущей верстки сайта Selectel.
@@ -190,7 +191,7 @@ def analyze_documentation_page(url: str, link_status_cache: dict) -> dict:
             language_counter[lang] += 1
         page_result["code_blocks_count"] = len(code_blocks)
         page_result["code_languages"] = dict(language_counter)
-        
+
         # Ищем ключевые инструменты и считаем их упоминания.
         found_tools_with_counts = {}
         for tool in TOOLS_KEYWORDS:
@@ -199,13 +200,13 @@ def analyze_documentation_page(url: str, link_status_cache: dict) -> dict:
             if matches:
                 found_tools_with_counts[tool] = len(matches)
         page_result["found_tools"] = found_tools_with_counts
-        
+
         # *** РЕКОМЕНДАЦИЯ №1 и №3: Многопоточная проверка ссылок с кэшированием ***
         # 1. Сбор и подготовка всех ссылок
         all_links_on_page = soup.find_all('a', href=True)
         internal_links, external_links = 0, 0
         base_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
-        
+
         # Собираем в `set`, чтобы сразу отсеять дубликаты ссылок на этой странице.
         unique_urls_to_check = set()
         for link in all_links_on_page:
@@ -213,17 +214,17 @@ def analyze_documentation_page(url: str, link_status_cache: dict) -> dict:
             # Пропускаем "якорные" ссылки (ведущие на эту же страницу).
             if href.startswith('#') or not href.strip():
                 continue
-            
+
             # Превращаем относительные ссылки (например, "/page.html") в абсолютные.
             absolute_url = urljoin(base_url, href)
             unique_urls_to_check.add(absolute_url)
-            
+
             # Классифицируем ссылку как внутреннюю или внешнюю.
             if urlparse(absolute_url).netloc == urlparse(base_url).netloc:
                 internal_links += 1
             else:
                 external_links += 1
-        
+
         # 2. Фильтрация ссылок, которые уже были проверены ранее (использование кэша)
         # Оставляем только те ссылки, статуса которых еще нет в нашем глобальном кэше.
         new_urls_to_check = [u for u in unique_urls_to_check if u not in link_status_cache]
@@ -241,13 +242,13 @@ def analyze_documentation_page(url: str, link_status_cache: dict) -> dict:
                     # Обновляем наш кэш результатами, чтобы не проверять эту ссылку в будущем.
                     link_status_cache[u] = is_broken
             print("  -> Проверка ссылок завершена.")
-            
+
         # 4. Подсчет битых ссылок на ТЕКУЩЕЙ странице, используя обновленный кэш
         broken_links_count = 0
         for u in unique_urls_to_check:
             if link_status_cache.get(u, False): # Если ссылка в кэше и она 'битая'
                 broken_links_count += 1
-        
+
         # Сохраняем итоговую сводку по ссылкам в наш словарь результатов.
         page_result["links_summary"] = {
             "total_links": len(all_links_on_page),
@@ -261,11 +262,11 @@ def analyze_documentation_page(url: str, link_status_cache: dict) -> dict:
         page_result["error_message"] = str(e)
     except Exception as e:
         page_result["error_message"] = str(e)
-    
+
     # --- ВЫВОД РЕЗУЛЬТАТОВ В ТЕРМИНАЛ ---
     print_report(page_result)
     print(f"{'='*25} Конец анализа {'='*25}")
-    
+
     # Возвращаем словарь с результатами для последующей обработки.
     return page_result
 
@@ -275,7 +276,7 @@ def analyze_documentation_page(url: str, link_status_cache: dict) -> dict:
 # когда мы запускаем этот файл напрямую, а не импортируем его в другой скрипт.
 if __name__ == "__main__":
     print("🚀 Запускаю скрипт для анализа документации...")
-    
+
     # Создаем папки для скачанных страниц и результатов, если их не существует.
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
@@ -295,9 +296,9 @@ if __name__ == "__main__":
         # Передаем кэш в функцию анализа.
         result = analyze_documentation_page(url, master_link_cache)
         all_results.append(result)
-    
+
     print(f"\n📊 Всего проверено и закэшировано {len(master_link_cache)} уникальных ссылок.")
-    
+
     # --- СОХРАНЕНИЕ РЕЗУЛЬТАТОВ В ФАЙЛЫ ---
     # Сохраняем итоговый список в JSON-файл.
     with open(JSON_RESULTS_FILE, 'w', encoding='utf-8') as f:
@@ -318,5 +319,5 @@ if __name__ == "__main__":
     # Сохраняем таблицу в Excel-файл. `index=False` убирает лишний столбец с индексами.
     df.to_excel(EXCEL_RESULTS_FILE, index=False, engine='openpyxl')
     print(f"✅ Результаты анализа сохранены в Excel файл: {EXCEL_RESULTS_FILE}")
-    
+
     print("\n🎉 Все задачи выполнены.")
